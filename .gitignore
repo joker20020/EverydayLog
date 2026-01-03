@@ -12,3 +12,6 @@ wheels/
 
 # Environment files
 .env
+
+# Temp directory
+temp_screenshot/

@@ -1,6 +1,5 @@
 import asyncio
 import os
-import PIL.Image
 import pyautogui
 import datetime
 import base64
@@ -70,10 +69,12 @@ if __name__ == "__main__":
 
     # init image content
     img_content = []
+    if not os.path.exists("./temp_screenshot"):
+        os.mkdir("./temp_screenshot/")
 
     while True:
         if (shot_end_time - shot_start_time).seconds > shot_freq and len(img_content) < summary_freq // shot_freq:
-            print(f"截图中...\n{shot_end_time.isoformat()}")
+            print(f"Taking screenshot...\n{shot_end_time.isoformat()}")
             screen_img = np.asarray(pyautogui.screenshot())
             screen_img = cv2.resize(screen_img, (force_width, force_height))
             save_path = f"./temp_screenshot/screenshot_{shot_end_time.timestamp()}.png"
@@ -95,7 +96,7 @@ if __name__ == "__main__":
             shot_start_time = datetime.datetime.now()
             shot_end_time = datetime.datetime.now()
         if (summary_end_time - summary_start_time).seconds > summary_freq:
-            print(f"分析中...\n{summary_end_time.isoformat()}")
+            print(f"Analyzing...\n{summary_end_time.isoformat()}")
             content = [
                 TextBlock(
                     type="text",
