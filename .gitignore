@@ -17,4 +17,5 @@ wheels/
 temp_screenshot/
 
 # Data directory
-data/*.*
+data/*.db
+data/*.sqlite3
