@@ -21,4 +21,5 @@ uv run main.py
 shot_freq = 10 # screenshot frequency
 summary_freq = 60 # summary frequency(call VLM)
 force_width, force_height = (1280, 720) # force resolution
+username = "admin" # keep for future use
 ```
