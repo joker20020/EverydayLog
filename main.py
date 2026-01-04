@@ -5,33 +5,43 @@ import datetime
 import base64
 import cv2
 import numpy as np
+import logging
 
-from agentscope.agent import ReActAgent, AgentBase
-from agentscope.formatter import DashScopeChatFormatter, OpenAIChatFormatter
+from agentscope.agent import ReActAgent
+from agentscope.formatter import OpenAIChatFormatter
 from agentscope.memory import InMemoryMemory
 from agentscope.message import (
     Msg,
     Base64Source,
     TextBlock,
-    ThinkingBlock,
-    ImageBlock,
-    AudioBlock,
-    VideoBlock,)
-from agentscope.model import DashScopeChatModel, OpenAIChatModel
-from agentscope.tool import Toolkit, execute_python_code
+    ImageBlock,)
+from agentscope.model import OpenAIChatModel
+from agentscope.tool import Toolkit
+
 from dotenv import load_dotenv
+from database import Record, User
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
+from typing import List
 
+# log init
 load_dotenv()
+logger = logging.getLogger("agent_logger")
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 
-async def creating_react_agent(content) -> None:
-    """创建一个 ReAct 智能体并运行一个简单任务。"""
+async def creating_react_agent(content) -> List[Msg]:
+    """create ReAct agent"""
     # 准备工具
     toolkit = Toolkit()
-    # toolkit.register_tool_function(execute_python_code)
 
-    jarvis = ReActAgent(
+    agent = ReActAgent(
         name="Jarvis",
         sys_prompt="你是一个优秀的助手，你的任务是根据用户的屏幕截图，分析用户在一段时间内所进行的工作",
         model=OpenAIChatModel(
@@ -52,13 +62,37 @@ async def creating_react_agent(content) -> None:
         role="user",
     )
 
-    await jarvis(msg)
+    await agent(msg)
+
+    return await agent.memory.get_memory()
 
 
 if __name__ == "__main__":
+
+    # init db
+    engine = create_engine(os.environ["DATABASE_URL"])
+    User.metadata.create_all(engine)
+
+    # debug
+    username = "admin"
+    with Session(engine) as session:
+        user = session.query(User).filter(User.username == username).first()
+        if user is None:
+            user = User(
+                username=username,
+                password="admin",
+                last_login=datetime.datetime.now(),
+            )
+            session.add(user)
+            session.commit()
+        else:
+            user.last_login = datetime.datetime.now()
+            session.commit()
+
+    logger.info(user)
     # second
-    shot_freq = 10
-    summary_freq = 60
+    shot_freq = 5
+    summary_freq = 30
     force_width, force_height = (1280, 720)
 
     # init timer
@@ -69,15 +103,17 @@ if __name__ == "__main__":
 
     # init image content
     img_content = []
-    if not os.path.exists("./temp_screenshot"):
-        os.mkdir("./temp_screenshot/")
+    img_paths = []
+    if not os.path.exists("./temp/temp_screenshot"):
+        logger.info("temp/temp_screenshot dir not find, creating...")
+        os.mkdir("./temp/temp_screenshot")
 
     while True:
         if (shot_end_time - shot_start_time).seconds > shot_freq and len(img_content) < summary_freq // shot_freq:
-            print(f"Taking screenshot...\n{shot_end_time.isoformat()}")
+            logger.info(f"Taking screenshot...\n{shot_end_time.isoformat()}")
             screen_img = np.asarray(pyautogui.screenshot())
             screen_img = cv2.resize(screen_img, (force_width, force_height))
-            save_path = f"./temp_screenshot/screenshot_{shot_end_time.timestamp()}.png"
+            save_path = f"./temp/temp_screenshot/screenshot_{shot_end_time.timestamp()}.png"
             cv2.imwrite(save_path, screen_img)
             _, encode_img = cv2.imencode(".png", screen_img)
             img_content.append(
@@ -92,11 +128,12 @@ if __name__ == "__main__":
                     ),
                 )
             )
+            img_paths.append(save_path)
 
             shot_start_time = datetime.datetime.now()
             shot_end_time = datetime.datetime.now()
         if (summary_end_time - summary_start_time).seconds > summary_freq:
-            print(f"Analyzing...\n{summary_end_time.isoformat()}")
+            logger.info(f"Analyzing...\n{summary_end_time.isoformat()}")
             content = [
                 TextBlock(
                     type="text",
@@ -104,7 +141,20 @@ if __name__ == "__main__":
                          f"请根据图片内容，给出一个总结。"
                     ),
             ] + img_content
-            asyncio.run(creating_react_agent(content))
+            summary_Msgs = asyncio.run(creating_react_agent(content))
+
+            # add to database
+            with Session(engine) as session:
+                user = session.query(User).filter(User.username == username).first()
+                record = Record(
+                    start_time=summary_start_time,
+                    end_time=summary_end_time,
+                    content=summary_Msgs[-1].get_text_content(),
+                    image_list=";".join(img_paths),
+                    user_id=user.user_id,
+                )
+                session.add(record)
+                session.commit()
 
             summary_start_time = datetime.datetime.now()
             summary_end_time = datetime.datetime.now()

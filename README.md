@@ -4,7 +4,7 @@ Daily computer operation logs based on agent and VLM
 # Usage
 ## clone this repo
 ```bash
-git clone 
+git clone https://github.com/joker20020/EverydayLog.git
 ```
 ## install dependencies
 ```bash
