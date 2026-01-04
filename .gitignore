@@ -15,3 +15,6 @@ wheels/
 
 # Temp directory
 temp_screenshot/
+
+# Data directory
+data/*.*
