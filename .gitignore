@@ -19,3 +19,6 @@ temp_screenshot/
 # Data directory
 data/*.db
 data/*.sqlite3
+
+# Example directory
+example/
