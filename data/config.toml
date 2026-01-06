@@ -1,2 +1,0 @@
-DATABASE_URL = "sqlite+pysqlite:///E:/documents/pythonProjects/EverydayLog/data/db/db.sqlite3"
-IMAGE_TEMP_PATH = "E:/documents/pythonProjects/EverydayLog/temp/temp_screenshot"
