@@ -152,7 +152,7 @@ class ReActAgentTask(TaskBase):
             name="Jarvis",
             sys_prompt="你是一个优秀的助手，你的任务是根据用户的屏幕截图，分析用户在一段时间内所进行的工作，并以第二人称进行回答",
             model=OpenAIChatModel(
-                model_name="qwen3-vl-8b-instruct",
+                model_name=os.environ["MODEL_NAME"],
                 api_key=os.environ["OPENAI_API_KEY"],
                 stream=True,
                 # enable_thinking=False,

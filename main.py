@@ -28,6 +28,13 @@ if __name__ == "__main__":
     if args.command_line:
         from task import ReActAgentTask
         import time
+        import signal
+
+        def KI_handler(signum, frame):
+            print("Killed by user")
+            exit(0)
+        signal.signal(signal.SIGINT, KI_handler)
+
         shot_freq = args.shot_freq
         summary_freq = args.summary_freq
         force_width, force_height = args.force_size

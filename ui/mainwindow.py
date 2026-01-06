@@ -148,6 +148,7 @@ class StartWindow(QWidget):
         self.engin = create_engine(self.config["DATABASE_URL"])
 
         self.main_window = None
+        self.setWindowTitle(self.tr("EverydayLog"))
 
         self.form_layout = QFormLayout(self)
 
