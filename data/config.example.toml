@@ -1,0 +1,2 @@
+DATABASE_URL = "sqlite+pysqlite:///./data/db/db.sqlite3"
+IMAGE_TEMP_PATH = "./temp/temp_screenshot"

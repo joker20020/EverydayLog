@@ -19,6 +19,7 @@ temp_screenshot/
 # Data directory
 data/*.db
 data/*.sqlite3
+config.toml
 
 # Example directory
 example/

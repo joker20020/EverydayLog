@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from util import logger
 from abc import abstractmethod
 
+
 class TaskBase(QThread):
     """任务基类"""
     task_start = Signal()
@@ -41,7 +42,6 @@ class TaskBase(QThread):
         self.is_paused = False
         self.is_stopped = False
         self.is_finished = False
-
 
     def run(self):
         self.task_start.emit()
@@ -68,9 +68,11 @@ class TaskBase(QThread):
     def main_fun(self):
         pass
 
+    @abstractmethod
     def before_run(self):
         pass
 
+    @abstractmethod
     def after_run(self):
         pass
 
