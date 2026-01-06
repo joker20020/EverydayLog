@@ -158,6 +158,13 @@ class RecordWidgetList(ScrollArea):
         self.v_box_layout.addWidget(record_widget)
         self.records_container.adjustSize()
 
+    def clear_records(self):
+        for i in range(self.v_box_layout.count()):
+            widget = self.v_box_layout.itemAt(0).widget()
+            if isinstance(widget, RecordWidget):
+                self.v_box_layout.removeWidget(widget)
+                widget.deleteLater()
+
     def bind(self):
         pass
 

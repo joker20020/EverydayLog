@@ -89,6 +89,7 @@ class Window(FluentWindow):
         self.resize(1200, 800)
 
     def refresh_record(self):
+        self.records_interface.clear_records()
         with Session(self.engine) as session:
             user = session.query(User).filter(User.username == self.username).first()
             for record in session.query(Record).filter(Record.user_id == user.user_id).all():
@@ -145,7 +146,8 @@ class StartWindow(QWidget):
         with open(os.environ["EVERYDAY_LOG_CONFIG_PATH"]) as f:
             self.config = rtoml.load(f)
 
-        self.engin = create_engine(self.config["DATABASE_URL"])
+        self.engine = create_engine(self.config["DATABASE_URL"])
+        User.metadata.create_all(self.engine)
 
         self.main_window = None
         self.setWindowTitle(self.tr("EverydayLog"))
@@ -182,13 +184,13 @@ class StartWindow(QWidget):
         confirm.cancelButton.setText(self.tr("取消"))
         if not confirm.exec():
             return
-        with Session(self.engin) as session:
+        with Session(self.engine) as session:
             user = User(username=self.username_edit.text(), password=self.password_edit.text(), last_login=datetime.datetime.now())
             session.add(user)
             session.commit()
 
     def login(self):
-        with Session(self.engin) as session:
+        with Session(self.engine) as session:
             user = session.query(User).filter(User.username == self.username_edit.text()).first()
             if user is not None and user.password == self.password_edit.text():
                 user.last_login = datetime.datetime.now()
