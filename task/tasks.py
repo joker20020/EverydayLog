@@ -4,14 +4,16 @@
 # @version  : V1
 import datetime
 import os
+import time
+
 import cv2
 import numpy as np
 import base64
 import pyautogui
 import asyncio
+import rtoml
 
-
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, Signal
 from agentscope.agent import ReActAgent
 from agentscope.memory import InMemoryMemory
 from agentscope.message import Msg, ImageBlock, TextBlock, Base64Source
@@ -25,11 +27,14 @@ from sqlalchemy.orm import Session
 from util import logger
 from abc import abstractmethod
 
-
 class TaskBase(QThread):
     """任务基类"""
-    def __init__(self):
+    task_start = Signal()
+    task_end = Signal()
+
+    def __init__(self, username: str):
         super().__init__()
+        self.username = username
         self.start_time = datetime.datetime.now()
         self.end_time = None
         self.is_running = False
@@ -37,7 +42,9 @@ class TaskBase(QThread):
         self.is_stopped = False
         self.is_finished = False
 
+
     def run(self):
+        self.task_start.emit()
         self.before_run()
         self.is_running = True
         while self.is_running:
@@ -47,6 +54,7 @@ class TaskBase(QThread):
             if self.is_stopped:
                 self.is_running = False
                 self.end_time = datetime.datetime.now()
+                self.task_end.emit()
                 return
             # main loop
             self.main_fun()
@@ -54,6 +62,7 @@ class TaskBase(QThread):
         self.is_finished = True
         self.end_time = datetime.datetime.now()
         self.after_run()
+        self.task_end.emit()
 
     @abstractmethod
     def main_fun(self):
@@ -83,14 +92,16 @@ class TaskBase(QThread):
 
 class ReActAgentTask(TaskBase):
     """ReActAgentChatTask"""
+    take_shot = Signal()
+    summary = Signal()
 
     def __init__(self, username: str, shot_freq: float = 10, summary_freq: float = 60,
                  force_size: Tuple[int, int] = (1280, 720)
                  ):
-        super().__init__()
+        super().__init__(username)
 
-        self.username = username
         self.engine = None
+        self.setTerminationEnabled(True)
 
         # as second
         self.shot_freq = shot_freq
@@ -107,11 +118,15 @@ class ReActAgentTask(TaskBase):
         self.img_paths = []
         self.img_datas = []
 
+        with open(os.environ["EVERYDAY_LOG_CONFIG_PATH"]) as f:
+            config = rtoml.load(f)
+        self.img_save_dir = config["IMAGE_TEMP_PATH"]
+
         self.reset_cache()
-        if not os.path.exists(os.environ["IMAGE_TEMP_PATH"]):
+        if not os.path.exists(self.img_save_dir):
             logger.info("temp screenshot dir not find, creating...")
             if "IMAGE_TEMP_PATH" in os.environ.keys():
-                os.mkdir(os.environ["IMAGE_TEMP_PATH"])
+                os.mkdir(self.img_save_dir)
             else:
                 os.mkdir("temp/temp_screenshot")
 
@@ -157,8 +172,10 @@ class ReActAgentTask(TaskBase):
         return await agent.memory.get_memory()
 
     def before_run(self):
+        with open(os.environ["EVERYDAY_LOG_CONFIG_PATH"]) as f:
+            config = rtoml.load(f)
         # init db
-        self.engine = create_engine(os.environ["DATABASE_URL"])
+        self.engine = create_engine(config["DATABASE_URL"])
         User.metadata.create_all(self.engine)
 
     def main_fun(self):
@@ -166,9 +183,10 @@ class ReActAgentTask(TaskBase):
                 len(self.img_blocks) < self.summary_freq // self.shot_freq
         ):
             logger.info(f"Taking screenshot...\n{self.shot_end_time.isoformat()}")
+            self.take_shot.emit()
             screen_img = np.asarray(pyautogui.screenshot())
             screen_img = cv2.resize(screen_img, (self.force_width, self.force_height))
-            save_path = os.path.abspath(f"{os.environ['IMAGE_TEMP_PATH']}/screenshot_{self.shot_end_time.timestamp()}.png")
+            save_path = os.path.abspath(f"{self.img_save_dir}/screenshot_{self.shot_end_time.timestamp()}.png")
 
             self.img_datas.append(screen_img)
             _, encode_img = cv2.imencode(".png", screen_img)
@@ -189,7 +207,8 @@ class ReActAgentTask(TaskBase):
             self.shot_start_time = datetime.datetime.now()
             self.shot_end_time = datetime.datetime.now()
         if (self.summary_end_time - self.summary_start_time).seconds > self.summary_freq:
-            logger.info(f"Analyzing...\n{self.summary_end_time.isoformat()}")
+            logger.info(f"Summarizing...\n{self.summary_end_time.isoformat()}")
+            self.summary.emit()
             content = [
                 TextBlock(
                     type="text",
@@ -223,8 +242,19 @@ class ReActAgentTask(TaskBase):
 
         self.shot_end_time = datetime.datetime.now()
         self.summary_end_time = datetime.datetime.now()
+        time.sleep(1)
 
     def resume(self):
         super().resume()
         self.reset_cache()
 
+if __name__ == "__main__":
+    # second
+    shot_freq = 5
+    summary_freq = 30
+    force_width, force_height = (1280, 720)
+
+    task = ReActAgentTask("admin", shot_freq, summary_freq, force_size=(force_width, force_height))
+    task.start()
+    time.sleep(5)
+    task.join()

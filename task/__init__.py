@@ -4,3 +4,11 @@
 # @version  : V1
 
 from .tasks import *
+
+
+def get_tasks():
+    task_list = {
+        "ReActAgentTask": "ReActAgentTask",
+    }
+
+    return task_list

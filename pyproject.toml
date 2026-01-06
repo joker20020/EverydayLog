@@ -12,5 +12,6 @@ dependencies = [
     "pydantic>=2.12.5",
     "pyside6>=6.10.1",
     "pyside6-fluent-widgets[full]>=1.10.5",
+    "rtoml>=0.13.0",
     "sqlalchemy>=2.0.45",
 ]
