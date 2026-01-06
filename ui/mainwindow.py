@@ -84,6 +84,8 @@ class Window(FluentWindow):
         self.initNavigation()
         self.initWindow()
 
+        self.stackedWidget.currentChanged.connect(lambda index: self.refresh_record() if index == 0 else None)
+
         self.resize(1200, 800)
 
     def refresh_record(self):

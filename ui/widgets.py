@@ -234,7 +234,7 @@ class TaskWidget(ScrollArea):
         self.force_height_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.force_height_num = SpinBox(self)
         self.force_height_num.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.force_width_num.setRange(0, 9999)
+        self.force_height_num.setRange(0, 9999)
         self.force_height_num.setValue(720)
 
         self.start_btn = PrimaryPushButton(self.tr("开始"), self)
@@ -248,7 +248,7 @@ class TaskWidget(ScrollArea):
         self.log_table.setBorderRadius(8)
         self.log_table.setWordWrap(False)
         self.log_table.setColumnCount(3)
-        self.log_table.setHorizontalHeaderLabels([self.tr("级别"), self.tr("时间"), self.tr("内容")])
+        self.log_table.setHorizontalHeaderLabels([self.tr("时间"), self.tr("级别"), self.tr("内容")])
 
 
         # init layout
